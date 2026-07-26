@@ -546,6 +546,7 @@ export type EmployeeAttendance = {
   correctionReason?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['ID']['output'];
   id: Scalars['ID']['output'];
+  requestedStatus?: Maybe<Scalars['String']['output']>;
   source: Scalars['String']['output'];
   status: Scalars['String']['output'];
   tenantId: Scalars['ID']['output'];
@@ -1075,6 +1076,7 @@ export type Mutation = {
   updateTenant: Tenant;
   uploadEmployeeDocument: EmployeeDocument;
   uploadMaterial: StudyMaterial;
+  uploadProfilePicture: User;
   uploadStudentDocument: StudentDocument;
   userRegistration?: Maybe<User>;
   verifyUser?: Maybe<User>;
@@ -1807,6 +1809,12 @@ export type MutationUploadEmployeeDocumentArgs = {
 
 export type MutationUploadMaterialArgs = {
   material: UploadMaterialInput;
+};
+
+
+export type MutationUploadProfilePictureArgs = {
+  fileDataBase64: Scalars['String']['input'];
+  fileName: Scalars['String']['input'];
 };
 
 

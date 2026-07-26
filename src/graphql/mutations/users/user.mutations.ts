@@ -52,6 +52,15 @@ export const UPDATE_PROFILE_MUTATION = /* GraphQL */ `
   }
 `;
 
+export const UPLOAD_PROFILE_PICTURE_MUTATION = /* GraphQL */ `
+  mutation UploadProfilePicture($fileDataBase64: String!, $fileName: String!) {
+    uploadProfilePicture(fileDataBase64: $fileDataBase64, fileName: $fileName) {
+      id
+      profilePicture
+    }
+  }
+`;
+
 export const ONBOARD_EMPLOYEE_MUTATION = /* GraphQL */ `
   mutation OnboardEmployee($input: OnboardEmployeeInput!) {
     onboardEmployee(input: $input) {

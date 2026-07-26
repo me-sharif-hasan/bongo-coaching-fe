@@ -22,6 +22,7 @@ import { logoutSession } from "@/lib/auth/client";
 import { MeDocument } from "@/graphql/generated/index";
 import { isTeacherOnly, primaryRole } from "@/lib/auth/roles";
 import { DashboardSwitcherMenuItems } from "@/components/auth/DashboardSwitcherMenuItems";
+import { ProfilePictureUploader } from "@/components/dashboard/employees/ProfilePictureUploader";
 import { primaryGradient } from "@/theme/theme";
 
 const getInitials = (name: string) =>
@@ -51,12 +52,14 @@ export function UserProfile() {
         name: `${data.me.user.firstName} ${data.me.user.lastName}`.trim(),
         role: primaryRole(data.me.roles) ?? "Authenticated User",
         email: data.me.user.email,
+        profilePicture: data.me.user.profilePicture,
       }
     : fallbackUser;
 
   const displayName = currentUser.name || fallbackUser.name;
   const displayRole = currentUser.role || fallbackUser.role;
   const displayEmail = currentUser.email || fallbackUser.email;
+  const profilePicture = "profilePicture" in currentUser ? currentUser.profilePicture : null;
   const initials = getInitials(displayName);
   const isMenuOpen = !!menuAnchor;
 
@@ -122,6 +125,7 @@ export function UserProfile() {
         }}
       >
         <Avatar
+          src={profilePicture ?? undefined}
           sx={{
             width: 40,
             height: 40,
@@ -174,17 +178,11 @@ export function UserProfile() {
       >
         <Box sx={{ px: 2, py: 1.75 }}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar
-              sx={{
-                width: 44,
-                height: 44,
-                background: primaryGradient,
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              {initials}
-            </Avatar>
+            <ProfilePictureUploader
+              currentUrl={profilePicture}
+              fallbackText={displayName}
+              size={44}
+            />
 
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="subtitle2" noWrap>

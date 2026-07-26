@@ -13,7 +13,6 @@ import {
 import { useQuery } from "@apollo/client/react";
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Chip,
@@ -35,6 +34,7 @@ import {
 import { SummaryCard } from "@/components/ui";
 import { printPayslip } from "./payslip-print";
 import { downloadPdf, viewPdf } from "@/lib/pdf-actions";
+import { ProfilePictureUploader } from "./ProfilePictureUploader";
 
 type LeaveBalance = GetLeaveBalanceQuery["getLeaveBalance"][number];
 
@@ -134,12 +134,11 @@ export function MyProfileWorkspace() {
           {/* Identity + employment */}
           <Paper elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "divider" }}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} alignItems={{ sm: "center" }}>
-              <Avatar
-                src={profile.userInfo?.profilePicture ?? undefined}
-                sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
-              >
-                {fullName.charAt(0) || "?"}
-              </Avatar>
+              <ProfilePictureUploader
+                currentUrl={profile.userInfo?.profilePicture}
+                fallbackText={fullName}
+                size={64}
+              />
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" fontWeight={700}>
                   {fullName}
