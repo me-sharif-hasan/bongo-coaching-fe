@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { EventNoteRounded, RoomRounded } from "@mui/icons-material";
 import { useQuery } from "@apollo/client/react";
 import {
@@ -19,14 +19,9 @@ import { dayIndex, dayLabel, formatTime, useMyBatches, WEEK_ORDER } from "./teac
 
 export function MyScheduleWorkspace() {
   const { myBatches, loading: batchesLoading } = useMyBatches();
-  const [batchId, setBatchId] = useState("");
-
-  // Default to the first batch once they load.
-  useEffect(() => {
-    if (!batchId && myBatches.length > 0) {
-      setBatchId(myBatches[0].id);
-    }
-  }, [batchId, myBatches]);
+  const [selectedBatchId, setBatchId] = useState("");
+  // Defaults to the first batch once loaded, without syncing via an effect.
+  const batchId = selectedBatchId || myBatches[0]?.id || "";
 
   const { data, loading } = useQuery(GetMyRoutineDocument, {
     variables: { batchId },
