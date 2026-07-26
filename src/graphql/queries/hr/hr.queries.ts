@@ -174,7 +174,7 @@ export const GET_PENDING_OVERTIME_CLAIMS_QUERY = /* GraphQL */ `
 `;
 
 export const GET_LEAVE_APPLICATIONS_QUERY = /* GraphQL */ `
-  query GetLeaveApplications($employeeId: ID!) {
+  query GetLeaveApplications($employeeId: ID) {
     getLeaveApplications(employeeId: $employeeId) {
       id
       employeeId

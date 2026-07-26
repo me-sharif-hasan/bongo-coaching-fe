@@ -84,8 +84,8 @@ const buildAttendanceColumns = ({
     id: "employee",
     accessorFn: (row) => {
       const emp = employeeLookup.get(row.employeeId);
-      const name = emp?.userId ? (userLookup.get(emp.userId) ?? "—") : "—";
-      return name;
+      if (!emp) return "—";
+      return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
     },
     header: "Staff member",
     size: 200,

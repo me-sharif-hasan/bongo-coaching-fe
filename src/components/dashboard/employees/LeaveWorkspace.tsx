@@ -109,7 +109,8 @@ const buildLeaveColumns = ({
     id: "employee",
     accessorFn: (row) => {
       const emp = employeeLookup.get(row.employeeId);
-      return emp?.userId ? (userLookup.get(emp.userId) ?? "—") : "—";
+      if (!emp) return "—";
+      return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
     },
     header: "Employee",
     size: 200,
@@ -267,8 +268,9 @@ export function LeaveWorkspace() {
     error: leaveError,
     refetch: refetchLeave,
   } = useQuery(GetLeaveApplicationsDocument, {
-    skip: !selectedEmployeeId,
-    variables: { employeeId: selectedEmployeeId },
+    // Omitting employeeId (rather than skipping) returns every leave
+    // application for the tenant, so HR sees the full list by default.
+    variables: { employeeId: selectedEmployeeId || undefined },
     fetchPolicy: "cache-and-network",
   });
 
@@ -597,29 +599,7 @@ export function LeaveWorkspace() {
           </Paper>
         ) : null}
 
-        {!selectedEmployeeId ? (
-          <Paper
-            elevation={0}
-            sx={{ p: 4, border: "1px solid", borderColor: "divider" }}
-          >
-            <Stack spacing={2} alignItems="flex-start">
-              <Typography variant="h6">Select an employee to view leaves</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Choose an employee from the list below to see their leave history.
-              </Typography>
-              <Box sx={{ minWidth: 280 }}>
-                <SearchSelect
-                  label="Employee"
-                  placeholder="Search by name or code…"
-                  options={employeeOptions}
-                  value={selectedEmployeeId}
-                  onChange={setSelectedEmployeeId}
-                />
-              </Box>
-            </Stack>
-          </Paper>
-        ) : (
-          <MaterialReactTable
+        <MaterialReactTable
             columns={buildLeaveColumns({
               userLookup,
               employeeLookup,
@@ -730,7 +710,6 @@ export function LeaveWorkspace() {
             )}
             state={{ isLoading: isLeaveLoading && leaveRecords.length === 0 }}
           />
-        )}
       </Stack>
 
       <LeaveFormDialog

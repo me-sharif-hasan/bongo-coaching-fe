@@ -2281,7 +2281,7 @@ export type QueryGetInvoicesArgs = {
 
 
 export type QueryGetLeaveApplicationsArgs = {
-  employeeId: Scalars['ID']['input'];
+  employeeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
