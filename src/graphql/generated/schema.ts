@@ -884,6 +884,12 @@ export type LeaveApplication = {
   tenantId: Scalars['ID']['output'];
 };
 
+export type LeaveApplicationPage = {
+  __typename?: 'LeaveApplicationPage';
+  items: Array<LeaveApplication>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type LeaveBalance = {
   __typename?: 'LeaveBalance';
   employeeId: Scalars['ID']['output'];
@@ -2085,7 +2091,7 @@ export type Query = {
   getInvoice?: Maybe<Invoice>;
   getInvoices: Array<Invoice>;
   getLateFinePolicy?: Maybe<LateFinePolicy>;
-  getLeaveApplications: Array<LeaveApplication>;
+  getLeaveApplications: LeaveApplicationPage;
   getLeaveBalance: Array<LeaveBalance>;
   getLeavePolicies: Array<LeavePolicy>;
   getMaterialsByBatch: Array<StudyMaterial>;
@@ -2282,6 +2288,8 @@ export type QueryGetInvoicesArgs = {
 
 export type QueryGetLeaveApplicationsArgs = {
   employeeId?: InputMaybe<Scalars['ID']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
 };
 
 

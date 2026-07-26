@@ -55,7 +55,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { primaryGradient } from "@/theme/theme";
 import { LeaveFormDialog, type LeaveFormValues } from "./LeaveFormDialog";
 
-type LeaveRecord = GetLeaveApplicationsQuery["getLeaveApplications"][number];
+type LeaveRecord = GetLeaveApplicationsQuery["getLeaveApplications"]["items"][number];
 type LeaveBalance = GetLeaveBalanceQuery["getLeaveBalance"][number];
 type UserRecord = NonNullable<GetUsersQuery["getUsers"][number]>;
 
@@ -260,6 +260,7 @@ export function LeaveWorkspace() {
   const [rejectReason, setRejectReason] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [substituteFor, setSubstituteFor] = useState<LeaveRecord | null>(null);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
   const { data: usersData } = useQuery(GetUsersDocument, {
     variables: { page: 1, limit: 500 },
@@ -273,9 +274,20 @@ export function LeaveWorkspace() {
   } = useQuery(GetLeaveApplicationsDocument, {
     // Omitting employeeId (rather than skipping) returns every leave
     // application for the tenant, so HR sees the full list by default.
-    variables: { employeeId: selectedEmployeeId || undefined },
+    variables: {
+      employeeId: selectedEmployeeId || undefined,
+      page: pagination.pageIndex + 1,
+      limit: pagination.pageSize,
+    },
     fetchPolicy: "cache-and-network",
   });
+
+  // Switching the employee filter (or page size) restarts from page 1 --
+  // otherwise a narrower result set could leave the table on a now-empty page.
+  const handleEmployeeChange = (id: string) => {
+    setSelectedEmployeeId(id);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  };
 
   const { data: balanceData, refetch: refetchBalance } = useQuery(
     GetLeaveBalanceDocument,
@@ -318,7 +330,8 @@ export function LeaveWorkspace() {
   const users = (usersData?.getUsers ?? []).filter(
     (u): u is UserRecord => !!u,
   );
-  const leaveRecords = leaveData?.getLeaveApplications ?? [];
+  const leaveRecords = leaveData?.getLeaveApplications.items ?? [];
+  const leaveTotalCount = leaveData?.getLeaveApplications.totalCount ?? 0;
   const leaveBalances: LeaveBalance[] = balanceData?.getLeaveBalance ?? [];
 
   const userLookup = new Map(users.map((u) => [u.id, formatPersonName(u)]));
@@ -486,7 +499,7 @@ export function LeaveWorkspace() {
         >
           <SummaryCard
             caption="Total applications"
-            title={String(leaveRecords.length)}
+            title={String(leaveTotalCount)}
             icon={<EventNoteRounded />}
           />
           <SummaryCard
@@ -634,25 +647,24 @@ export function LeaveWorkspace() {
               isActioning,
             })}
             data={leaveTableData}
-            enableColumnFilters
+            // Pagination, sorting (latest-first by appliedAt), and the total
+            // row count all come from the server now -- column filters and
+            // the free-text search box are disabled because they'd otherwise
+            // silently only apply to the current page of results, not the
+            // full result set, which would be a correctness trap.
+            enableColumnFilters={false}
             enableDensityToggle={false}
             enableFullScreenToggle={false}
+            enableGlobalFilter={false}
             enableHiding={false}
             enableRowActions={false}
-            enableSorting
+            enableSorting={false}
             enableStickyHeader
             getRowId={(row) => row.id}
-            initialState={{
-              pagination: { pageIndex: 0, pageSize: 10 },
-              showColumnFilters: false,
-              sorting: [{ id: "startDate", desc: true }],
-            }}
+            manualPagination
+            onPaginationChange={setPagination}
+            rowCount={leaveTotalCount}
             localization={{ noRecordsToDisplay: "No leave applications found" }}
-            muiSearchTextFieldProps={{
-              placeholder: "Search leaves",
-              size: "small",
-              sx: { minWidth: { xs: "100%", md: 280 } },
-            }}
             muiBottomToolbarProps={{
               sx: {
                 borderTop: "1px solid",
@@ -716,11 +728,14 @@ export function LeaveWorkspace() {
                   placeholder="Search by name or code…"
                   options={employeeOptions}
                   value={selectedEmployeeId}
-                  onChange={setSelectedEmployeeId}
+                  onChange={handleEmployeeChange}
                 />
               </Box>
             )}
-            state={{ isLoading: isLeaveLoading && leaveRecords.length === 0 }}
+            state={{
+              isLoading: isLeaveLoading && leaveRecords.length === 0,
+              pagination,
+            }}
           />
       </Stack>
 

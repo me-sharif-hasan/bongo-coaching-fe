@@ -24,6 +24,13 @@
 //    each row (employeeDisplayName) via .map() before handing the array to
 //    the table, so `data` itself changes once employees load -- this is
 //    the scenario the first test below actually exercises.
+//
+// Two more, raised alongside the above: getLeaveApplications returned every
+// row in one unpaginated response with no ORDER BY (arbitrary DB order).
+// It's now genuinely paginated (page/limit args, LeaveApplicationPage {
+// items, totalCount }, latest-first via ORDER BY appliedAt DESC), and the
+// table uses manualPagination wired to those args instead of client-side
+// pagination over a locally-fetched full list.
 
 describe("Leave management", () => {
   it("shows every tenant leave application, with real employee names resolved, when no employee is selected", () => {
@@ -37,9 +44,11 @@ describe("Leave management", () => {
 
     cy.wait("@getLeaveApplications").then(({ request, response }) => {
       expect(request.body.variables?.employeeId, "employeeId should be omitted").to.be.undefined;
+      expect(request.body.variables?.page, "page defaults to 1").to.eq(1);
       expect(response?.body.errors, "getLeaveApplications should not error").to.not.exist;
-      const list = response?.body?.data?.getLeaveApplications;
-      expect(list, "leave applications list").to.be.an("array").and.have.length.greaterThan(0);
+      const page = response?.body?.data?.getLeaveApplications;
+      expect(page?.items, "leave applications items").to.be.an("array").and.have.length.greaterThan(0);
+      expect(page?.totalCount, "totalCount").to.be.a("number").and.be.greaterThan(page.items.length);
     });
     cy.wait("@getEmployees");
 
@@ -50,6 +59,26 @@ describe("Leave management", () => {
     // first-pass "—" (see comment above).
     cy.get("table tbody tr").should("have.length.greaterThan", 0);
     cy.get("table tbody tr td").first().should("not.have.text", "—");
+  });
+
+  it("paginates server-side: page 2 fetches different, later rows", () => {
+    cy.intercept("POST", "**/graphql", (req) => {
+      if (req.body?.operationName === "GetLeaveApplications") req.alias = "getLeaveApplications";
+    });
+
+    cy.loginByRole("hrManager");
+    cy.visit("/hr/dashboard/leave");
+    cy.wait("@getLeaveApplications");
+
+    cy.get('button[aria-label="Go to next page"]').click();
+    cy.wait("@getLeaveApplications").then(({ request, response }) => {
+      expect(request.body.variables?.page, "page 2 requested").to.eq(2);
+      expect(response?.body.errors, "getLeaveApplications should not error").to.not.exist;
+      const page = response?.body?.data?.getLeaveApplications;
+      expect(page?.items, "page 2 items").to.be.an("array").and.have.length.greaterThan(0);
+    });
+
+    cy.contains(/21-\d+ of \d+/).should("exist");
   });
 
   it("shows the employee code (not a blank dash) for an employee with no linked user account", () => {

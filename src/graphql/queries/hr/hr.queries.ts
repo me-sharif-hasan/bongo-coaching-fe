@@ -174,16 +174,19 @@ export const GET_PENDING_OVERTIME_CLAIMS_QUERY = /* GraphQL */ `
 `;
 
 export const GET_LEAVE_APPLICATIONS_QUERY = /* GraphQL */ `
-  query GetLeaveApplications($employeeId: ID) {
-    getLeaveApplications(employeeId: $employeeId) {
-      id
-      employeeId
-      leaveType
-      startDate
-      endDate
-      status
-      reason
-      tenantId
+  query GetLeaveApplications($employeeId: ID, $page: Int, $limit: Int) {
+    getLeaveApplications(employeeId: $employeeId, page: $page, limit: $limit) {
+      items {
+        id
+        employeeId
+        leaveType
+        startDate
+        endDate
+        status
+        reason
+        tenantId
+      }
+      totalCount
     }
   }
 `;
