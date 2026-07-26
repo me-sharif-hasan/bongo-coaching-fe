@@ -22,8 +22,13 @@ type TopbarProps = {
 };
 
 export function Topbar({ onMenuClick }: TopbarProps) {
-  const { data } = useQuery(GetCenterDocument);
   const { data: meData } = useQuery(MeDocument, { errorPolicy: "all" });
+  // Platform admins (e.g. BONGO_SUPER_ADMIN) have no tenant/center at all --
+  // calling this unconditionally made every one of their page loads throw a
+  // real backend exception ("Center profile not found for tenant: null").
+  const { data } = useQuery(GetCenterDocument, {
+    skip: !meData?.me?.tenantId,
+  });
   const { data: impersonationData } = useQuery(GetMyImpersonationStatusDocument, {
     errorPolicy: "all",
     fetchPolicy: "cache-and-network",
