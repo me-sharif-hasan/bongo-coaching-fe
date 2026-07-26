@@ -355,12 +355,7 @@ export function AttendanceWorkspace() {
             "linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(240,253,250,0.98) 100%)",
         }}
       >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          alignItems={{ md: "center" }}
-          spacing={3}
-        >
+        <Stack spacing={3}>
           <Box>
             <Typography variant="h4" component="h1" sx={{ mt: 0.5 }}>
               Staff attendance
@@ -369,14 +364,21 @@ export function AttendanceWorkspace() {
               View monthly attendance records and approve manual requests.
             </Typography>
           </Box>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} flexWrap="wrap">
+
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems={{ sm: "center" }}
+            flexWrap="wrap"
+            useFlexGap
+          >
             <DatePicker
               label="Month"
               value={selectedMonth}
               onChange={(v) => v && setSelectedMonth(v)}
               views={["month", "year"]}
               slotProps={{
-                textField: { size: "small", sx: { minWidth: 160 } },
+                textField: { size: "small", sx: { width: { xs: "100%", sm: 180 } } },
               }}
             />
             <SearchSelect
@@ -385,10 +387,10 @@ export function AttendanceWorkspace() {
               options={employeeOptions}
               value={selectedEmployeeId}
               onChange={setSelectedEmployeeId}
-              sx={{ minWidth: 220 }}
+              sx={{ width: { xs: "100%", sm: 260 } }}
             />
             {selectedEmployeeId ? (
-              <Stack direction="row" spacing={1}>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <Tooltip title="Record today's check-in">
                   <span>
                     <Button
