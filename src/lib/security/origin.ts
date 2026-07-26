@@ -25,7 +25,7 @@ const getRequestOrigin = (request: Request) => {
 export const rejectDisallowedOrigin = (request: Request) => {
   const requestOrigin = getRequestOrigin(request);
 
-  if (requestOrigin === env.appOrigin) {
+  if (requestOrigin !== null && env.allowedOrigins.includes(requestOrigin)) {
     return null;
   }
 

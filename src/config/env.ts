@@ -11,15 +11,29 @@ const parseTimeout = (value: string | undefined, fallback: number) => {
 
 const runtimeGraphqlUrl =
   process.env.NEXT_PUBLIC_GRAPHQL_URL ??
-  "http://coaching.bongobrain.it.com/graphiql";
+  "https://coaching.bongobrain.it.com/graphiql";
+
+// Server-side POST routes only accept requests from one of these origins.
+// Comma-separated so multiple live frontend domains can be allowed during a
+// domain migration without breaking the one still in DNS/cache.
+const defaultAllowedOrigins = [
+  "http://localhost:3000",
+  "https://edu.bongobrain.it.com",
+  "https://bongo-coaching.iishanto.com",
+];
+
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ??
+  process.env.APP_ORIGIN ??
+  process.env.NEXT_PUBLIC_APP_ORIGIN
+)
+  ?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean) ?? defaultAllowedOrigins;
 
 export const env = {
-  // Server-side POST routes use this origin to reject cross-site requests.
-  appOrigin:
-    process.env.APP_ORIGIN ??
-    process.env.NEXT_PUBLIC_APP_ORIGIN ??
-    "http://localhost:3000",
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://coaching.bongobrain.it.com",
+  allowedOrigins,
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://coaching.bongobrain.it.com",
   apiTimeout: parseTimeout(process.env.NEXT_PUBLIC_API_TIMEOUT, 10000),
   // `NEXT_PUBLIC_GRAPHQL_URL` may point to the GraphiQL UI, but server requests
   // and codegen need the actual GraphQL endpoint.
