@@ -8,6 +8,7 @@ import {
   accessibleDashboardKeys,
   effectiveRoles,
   isCenterAdmin,
+  isHrOnly,
   isStudent,
   isStudentRole,
   isTeacher,
@@ -165,6 +166,24 @@ describe("auth role routing", () => {
       expect(isCenterAdmin(["USER"])).to.be.false;
       expect(isCenterAdmin([])).to.be.false;
       expect(isCenterAdmin(null)).to.be.false;
+    });
+  });
+
+  describe("isHrOnly (My Profile routing target)", () => {
+    // Regression: UserProfile.tsx used to send every non-teacher to
+    // /dashboard/hr/my-profile, but that page lives under the center-admin
+    // shell and 404s/bounces pure HR staff (whose home is /hr/dashboard).
+    it("is true for HR_MANAGER-shaped roles (HR_ prefix), false once admin/center-admin is present", () => {
+      expect(isHrOnly(["HR_MANAGER"])).to.be.true;
+      expect(isHrOnly(["USER", "HR_MANAGER"])).to.be.true;
+      expect(isHrOnly(["HR_MANAGER", "CENTER_ADMIN"])).to.be.false;
+    });
+
+    it("is false for non-HR roles and empty/absent sets", () => {
+      expect(isHrOnly(["TEACHER"])).to.be.false;
+      expect(isHrOnly(["STUDENT"])).to.be.false;
+      expect(isHrOnly([])).to.be.false;
+      expect(isHrOnly(null)).to.be.false;
     });
   });
 

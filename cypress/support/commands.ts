@@ -66,11 +66,31 @@ Cypress.Commands.add("loginByRole", (role: string) => {
   );
 });
 
+// Opens the topbar account menu (UserProfile.tsx). Next.js dev hydration can
+// attach the button's onClick a beat after it's paintable, so this retries
+// the click until the menu opens -- checking aria-expanded (not menu
+// visibility) before re-clicking, so a click mid-open-transition never fires
+// a second click into the menu's own closing backdrop.
+const openAccountMenu = (attempt = 0) => {
+  cy.get('button[aria-haspopup="menu"]').then(($btn) => {
+    if ($btn.attr("aria-expanded") === "true") return;
+    cy.wrap($btn).click();
+    cy.wait(300);
+    if (attempt < 5) openAccountMenu(attempt + 1);
+  });
+};
+
+Cypress.Commands.add("openAccountMenu", () => {
+  openAccountMenu();
+  cy.get('[role="menu"]').should("be.visible");
+});
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       loginByRole(role: string): Chainable<void>;
+      openAccountMenu(): Chainable<void>;
     }
   }
 }

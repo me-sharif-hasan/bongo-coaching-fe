@@ -20,7 +20,7 @@ import {
 } from "@mui/icons-material";
 import { logoutSession } from "@/lib/auth/client";
 import { MeDocument } from "@/graphql/generated/index";
-import { isTeacherOnly, primaryRole } from "@/lib/auth/roles";
+import { isHrOnly, isTeacherOnly, primaryRole } from "@/lib/auth/roles";
 import { DashboardSwitcherMenuItems } from "@/components/auth/DashboardSwitcherMenuItems";
 import { ProfilePictureUploader } from "@/components/dashboard/employees/ProfilePictureUploader";
 import { primaryGradient } from "@/theme/theme";
@@ -75,9 +75,12 @@ export function UserProfile() {
 
   const handleViewProfile = () => {
     setMenuAnchor(null);
-    const profilePath = isTeacherOnly(data?.me?.roles)
+    const roles = data?.me?.roles;
+    const profilePath = isTeacherOnly(roles)
       ? "/teacher/dashboard/my-profile"
-      : "/dashboard/hr/my-profile";
+      : isHrOnly(roles)
+        ? "/hr/dashboard/my-profile"
+        : "/dashboard/hr/my-profile";
     router.push(profilePath);
   };
 

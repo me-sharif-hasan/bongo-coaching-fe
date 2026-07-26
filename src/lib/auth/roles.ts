@@ -102,6 +102,12 @@ export const isCenterAdmin = (roles?: readonly string[] | null) =>
 export const isTeacherOnly = (roles?: readonly string[] | null) =>
   isTeacherRole(roles) && !isAdminRole(roles);
 
+// Mirrors the "hr" dashboard's isMember predicate below: pure HR staff, whose
+// home is /hr/dashboard rather than the center-admin console. Used to pick
+// which "My Profile" screen to show for them.
+export const isHrOnly = (roles?: readonly string[] | null) =>
+  isHrRole(roles) && !isCenterAdmin(roles) && !isAdminRole(roles);
+
 type MeLike =
   | {
       userType?: string | null;

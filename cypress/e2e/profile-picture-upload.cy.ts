@@ -18,21 +18,8 @@ describe("Profile picture upload", () => {
     cy.wait("@me");
 
     // Opens the account menu (the compact topbar button), where the larger
-    // avatar + upload affordance lives. Next.js dev hydration can attach the
-    // onClick handler a beat after the static button is paintable, so retry
-    // the click if the menu hasn't opened yet (same hydration race the
-    // LogoUploader/typeReliably workaround in commands.ts guards against).
-    const openAccountMenu = (attempt = 0) => {
-      cy.get('button[aria-haspopup="menu"]').click();
-      cy.get("body").then(($body) => {
-        if ($body.find('[role="menu"]:visible').length === 0 && attempt < 5) {
-          cy.wait(300);
-          openAccountMenu(attempt + 1);
-        }
-      });
-    };
-    openAccountMenu();
-    cy.get('[role="menu"]').should("be.visible");
+    // avatar + upload affordance lives.
+    cy.openAccountMenu();
 
     cy.get('[role="menu"] input[type="file"]').selectFile(
       "cypress/fixtures/sample-avatar.png",
