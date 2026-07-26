@@ -179,6 +179,7 @@ export const GET_LEAVE_APPLICATIONS_QUERY = /* GraphQL */ `
       items {
         id
         employeeId
+        employeeName
         leaveType
         startDate
         endDate

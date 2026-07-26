@@ -86,8 +86,6 @@ const calcDays = (startDate: string, endDate: string) => {
   return end.diff(start, "day") + 1;
 };
 
-type LeaveTableRow = LeaveRecord & { employeeDisplayName: string };
-
 const buildLeaveColumns = ({
   onApprove,
   onReject,
@@ -100,26 +98,16 @@ const buildLeaveColumns = ({
   onCancel: (id: string) => void;
   onFindSubstitute: (record: LeaveRecord) => void;
   isActioning: boolean;
-}): MRT_ColumnDef<LeaveTableRow>[] => [
+}): MRT_ColumnDef<LeaveRecord>[] => [
   {
-    // A plain accessorKey (rather than an accessorFn closing over
-    // employeeLookup/userLookup) so the table's row model actually
-    // recomputes once employees/users finish loading. tanstack-table
-    // memoizes rows keyed on the `data` array reference; when Employee
-    // resolution lived in an accessorFn closure, `data` (leaveRecords)
-    // resolved before the employees query did, so the table froze on its
-    // first pass ("—" for every row, since employeeLookup was still empty)
-    // and never recomputed even after employees arrived, because the
-    // leaveRecords array reference itself never changed. Baking the
-    // resolved name into each row (see employeeDisplayName below) means
-    // `data` genuinely changes -- and the table redraws -- once employees
-    // load.
-    accessorKey: "employeeDisplayName",
+    // Resolved server-side (see getLeaveApplications), so this never
+    // depends on a separate GetEmployees/GetUsers query finishing first.
+    accessorKey: "employeeName",
     header: "Employee",
     size: 200,
     Cell: ({ cell }) => (
       <Typography variant="body2" fontWeight={600}>
-        {String(cell.getValue())}
+        {String(cell.getValue() ?? "—")}
       </Typography>
     ),
   },
@@ -335,18 +323,6 @@ export function LeaveWorkspace() {
   const leaveBalances: LeaveBalance[] = balanceData?.getLeaveBalance ?? [];
 
   const userLookup = new Map(users.map((u) => [u.id, formatPersonName(u)]));
-  const employeeLookup = new Map(employees.map((e) => [e.id, e]));
-
-  const resolveEmployeeName = (employeeId: string) => {
-    const emp = employeeLookup.get(employeeId);
-    if (!emp) return "—";
-    return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
-  };
-
-  const leaveTableData: LeaveTableRow[] = leaveRecords.map((r) => ({
-    ...r,
-    employeeDisplayName: resolveEmployeeName(r.employeeId),
-  }));
 
   const employeeOptions: SearchSelectOption[] = employees.map((e) => {
     const name = e.userId
@@ -646,7 +622,7 @@ export function LeaveWorkspace() {
               onFindSubstitute: setSubstituteFor,
               isActioning,
             })}
-            data={leaveTableData}
+            data={leaveRecords}
             // Pagination, sorting (latest-first by appliedAt), and the total
             // row count all come from the server now -- column filters and
             // the free-text search box are disabled because they'd otherwise

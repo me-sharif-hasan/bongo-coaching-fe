@@ -874,6 +874,12 @@ export type LeaveApplication = {
   approvalDate?: Maybe<Scalars['String']['output']>;
   approvedBy?: Maybe<Scalars['ID']['output']>;
   employeeId: Scalars['ID']['output'];
+  /**
+   *  Resolved server-side (employee's linked user's name, falling back to
+   *  employee code) so the client never has to join it separately. Only
+   *  populated by getLeaveApplications; null on other mutations' responses.
+   */
+  employeeName?: Maybe<Scalars['String']['output']>;
   endDate: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   leaveType: Scalars['String']['output'];

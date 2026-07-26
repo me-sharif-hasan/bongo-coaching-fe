@@ -1,42 +1,37 @@
 /// <reference types="cypress" />
 
 // Regression coverage for Staff Attendance's sibling page, Leave Management
-// (/hr/dashboard/leave). Three real bugs reported here, all fixed:
+// (/hr/dashboard/leave). Real issues reported here, all fixed:
 //
 //  - getLeaveApplications required employeeId (schema: ID!), so nothing
 //    showed until an employee was picked. Backend now accepts a nullable
 //    employeeId (ID) and returns every tenant leave application when it's
 //    omitted; the frontend now always queries (no `skip`) and no longer
 //    gates the table behind an employee-selection screen.
-//  - The Employee column's accessorFn hardcoded "—" for any employee with
-//    no linked user account (emp.userId null), instead of falling back to
-//    the employee code like every other employee-picker in the app does.
-//    EMP-2026-0001 has no linked user, so its leave application always
-//    rendered a blank "—" in that column.
-//  - The real one: even with both fixes above, the Employee column still
-//    showed "—" for every row in the all-leaves view (employees WITH a
-//    linked user included). tanstack-table memoizes its row model keyed on
-//    the `data` array reference; GetLeaveApplications resolves before
-//    GetEmployees does, so the accessorFn's employeeLookup/userLookup
-//    closures were empty on the table's first pass, and since leaveRecords'
-//    array reference never changed afterward, the table never recomputed
-//    even once employees loaded. Fixed by baking the resolved name into
-//    each row (employeeDisplayName) via .map() before handing the array to
-//    the table, so `data` itself changes once employees load -- this is
-//    the scenario the first test below actually exercises.
-//
-// Two more, raised alongside the above: getLeaveApplications returned every
-// row in one unpaginated response with no ORDER BY (arbitrary DB order).
-// It's now genuinely paginated (page/limit args, LeaveApplicationPage {
-// items, totalCount }, latest-first via ORDER BY appliedAt DESC), and the
-// table uses manualPagination wired to those args instead of client-side
-// pagination over a locally-fetched full list.
+//  - The Employee column resolved the name client-side (join against
+//    GetEmployees/GetUsers), which had two problems: it hardcoded "—" for
+//    an employee with no linked user account instead of falling back to
+//    the employee code, and -- the real bug -- tanstack-table memoizes its
+//    row model keyed on the `data` array reference, so when
+//    GetLeaveApplications resolved before GetEmployees did, the table
+//    froze on "—" for every row and never recomputed even once employees
+//    loaded (the array reference never changed). Fixed properly by moving
+//    name resolution server-side: getLeaveApplications now returns
+//    employeeName directly on each LeaveApplication (resolved from the
+//    employee's linked user, falling back to employee code), so the raw
+//    API response itself carries the name and there's no client-side join
+//    or race to get wrong.
+//  - getLeaveApplications returned every row in one unpaginated response
+//    with no ORDER BY (arbitrary DB order). It's now genuinely paginated
+//    (page/limit args, LeaveApplicationPage { items, totalCount },
+//    latest-first via ORDER BY appliedAt DESC), and the table uses
+//    manualPagination wired to those args instead of client-side
+//    pagination over a locally-fetched full list.
 
 describe("Leave management", () => {
-  it("shows every tenant leave application, with real employee names resolved, when no employee is selected", () => {
+  it("shows every tenant leave application, with employeeName resolved server-side, when no employee is selected", () => {
     cy.intercept("POST", "**/graphql", (req) => {
       if (req.body?.operationName === "GetLeaveApplications") req.alias = "getLeaveApplications";
-      if (req.body?.operationName === "GetEmployees") req.alias = "getEmployees";
     });
 
     cy.loginByRole("hrManager");
@@ -49,14 +44,14 @@ describe("Leave management", () => {
       const page = response?.body?.data?.getLeaveApplications;
       expect(page?.items, "leave applications items").to.be.an("array").and.have.length.greaterThan(0);
       expect(page?.totalCount, "totalCount").to.be.a("number").and.be.greaterThan(page.items.length);
+      // The actual complaint: employeeName must be present in the raw
+      // API response itself, not resolved by a separate client-side query.
+      page.items.forEach((item: { employeeName?: string | null }) => {
+        expect(item.employeeName, "employeeName on each item").to.be.a("string").and.not.be.empty;
+      });
     });
-    cy.wait("@getEmployees");
 
     cy.contains("Total applications").parent().should("not.contain", "0");
-
-    // The real regression: table cells must actually re-render with the
-    // resolved name once employees load, not freeze on the table's
-    // first-pass "—" (see comment above).
     cy.get("table tbody tr").should("have.length.greaterThan", 0);
     cy.get("table tbody tr td").first().should("not.have.text", "—");
   });
