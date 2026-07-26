@@ -43,7 +43,6 @@ import {
   GetLeaveBalanceDocument,
   GetUsersDocument,
   RejectLeaveDocument,
-  type GetEmployeesQuery,
   type GetLeaveApplicationsQuery,
   type GetLeaveBalanceQuery,
   type GetUsersQuery,
@@ -58,7 +57,6 @@ import { LeaveFormDialog, type LeaveFormValues } from "./LeaveFormDialog";
 
 type LeaveRecord = GetLeaveApplicationsQuery["getLeaveApplications"][number];
 type LeaveBalance = GetLeaveBalanceQuery["getLeaveBalance"][number];
-type EmployeeRecord = GetEmployeesQuery["getEmployees"][number];
 type UserRecord = NonNullable<GetUsersQuery["getUsers"][number]>;
 
 const STATUS_COLOR: Record<
@@ -88,30 +86,35 @@ const calcDays = (startDate: string, endDate: string) => {
   return end.diff(start, "day") + 1;
 };
 
+type LeaveTableRow = LeaveRecord & { employeeDisplayName: string };
+
 const buildLeaveColumns = ({
-  userLookup,
-  employeeLookup,
   onApprove,
   onReject,
   onCancel,
   onFindSubstitute,
   isActioning,
 }: {
-  userLookup: Map<string, string>;
-  employeeLookup: Map<string, EmployeeRecord>;
   onApprove: (id: string) => void;
   onReject: (record: LeaveRecord) => void;
   onCancel: (id: string) => void;
   onFindSubstitute: (record: LeaveRecord) => void;
   isActioning: boolean;
-}): MRT_ColumnDef<LeaveRecord>[] => [
+}): MRT_ColumnDef<LeaveTableRow>[] => [
   {
-    id: "employee",
-    accessorFn: (row) => {
-      const emp = employeeLookup.get(row.employeeId);
-      if (!emp) return "—";
-      return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
-    },
+    // A plain accessorKey (rather than an accessorFn closing over
+    // employeeLookup/userLookup) so the table's row model actually
+    // recomputes once employees/users finish loading. tanstack-table
+    // memoizes rows keyed on the `data` array reference; when Employee
+    // resolution lived in an accessorFn closure, `data` (leaveRecords)
+    // resolved before the employees query did, so the table froze on its
+    // first pass ("—" for every row, since employeeLookup was still empty)
+    // and never recomputed even after employees arrived, because the
+    // leaveRecords array reference itself never changed. Baking the
+    // resolved name into each row (see employeeDisplayName below) means
+    // `data` genuinely changes -- and the table redraws -- once employees
+    // load.
+    accessorKey: "employeeDisplayName",
     header: "Employee",
     size: 200,
     Cell: ({ cell }) => (
@@ -320,6 +323,17 @@ export function LeaveWorkspace() {
 
   const userLookup = new Map(users.map((u) => [u.id, formatPersonName(u)]));
   const employeeLookup = new Map(employees.map((e) => [e.id, e]));
+
+  const resolveEmployeeName = (employeeId: string) => {
+    const emp = employeeLookup.get(employeeId);
+    if (!emp) return "—";
+    return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
+  };
+
+  const leaveTableData: LeaveTableRow[] = leaveRecords.map((r) => ({
+    ...r,
+    employeeDisplayName: resolveEmployeeName(r.employeeId),
+  }));
 
   const employeeOptions: SearchSelectOption[] = employees.map((e) => {
     const name = e.userId
@@ -601,8 +615,6 @@ export function LeaveWorkspace() {
 
         <MaterialReactTable
             columns={buildLeaveColumns({
-              userLookup,
-              employeeLookup,
               onApprove: handleApprove,
               onReject: (record) => {
                 setLeaveToReject(record);
@@ -621,7 +633,7 @@ export function LeaveWorkspace() {
               onFindSubstitute: setSubstituteFor,
               isActioning,
             })}
-            data={leaveRecords}
+            data={leaveTableData}
             enableColumnFilters
             enableDensityToggle={false}
             enableFullScreenToggle={false}

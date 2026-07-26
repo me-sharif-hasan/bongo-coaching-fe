@@ -44,7 +44,6 @@ import {
   RecordCheckInDocument,
   RecordCheckOutDocument,
   RequestManualAttendanceDocument,
-  type GetEmployeesQuery,
   type GetMonthlyAttendanceSheetQuery,
   type GetUsersQuery,
 } from "@/graphql/generated";
@@ -53,7 +52,6 @@ import { getErrorMessage } from "@/lib/errors";
 
 type AttendanceRecord =
   GetMonthlyAttendanceSheetQuery["getMonthlyAttendanceSheet"][number];
-type EmployeeRecord = GetEmployeesQuery["getEmployees"][number];
 type UserRecord = NonNullable<GetUsersQuery["getUsers"][number]>;
 
 const STATUS_COLOR: Record<
@@ -69,24 +67,23 @@ const STATUS_COLOR: Record<
 const formatPersonName = (user: UserRecord) =>
   `${user.firstName} ${user.lastName ?? ""}`.trim() || user.email;
 
+type AttendanceTableRow = AttendanceRecord & { employeeDisplayName: string };
+
 const buildAttendanceColumns = ({
-  userLookup,
-  employeeLookup,
   onApprove,
   isApproving,
 }: {
-  userLookup: Map<string, string>;
-  employeeLookup: Map<string, EmployeeRecord>;
   onApprove: (id: string) => void;
   isApproving: boolean;
-}): MRT_ColumnDef<AttendanceRecord>[] => [
+}): MRT_ColumnDef<AttendanceTableRow>[] => [
   {
-    id: "employee",
-    accessorFn: (row) => {
-      const emp = employeeLookup.get(row.employeeId);
-      if (!emp) return "—";
-      return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
-    },
+    // A plain accessorKey rather than an accessorFn closing over
+    // employeeLookup/userLookup -- see the matching comment in
+    // LeaveWorkspace.tsx's buildLeaveColumns for why: tanstack-table
+    // memoizes rows keyed on the `data` array reference, so a closure-based
+    // accessorFn can freeze on stale ("—") values if employees load after
+    // the attendance query's own data first resolves.
+    accessorKey: "employeeDisplayName",
     header: "Staff member",
     size: 200,
     Cell: ({ cell }) => (
@@ -246,6 +243,17 @@ export function AttendanceWorkspace() {
 
   const userLookup = new Map(users.map((u) => [u.id, formatPersonName(u)]));
   const employeeLookup = new Map(employees.map((e) => [e.id, e]));
+
+  const resolveEmployeeName = (employeeId: string) => {
+    const emp = employeeLookup.get(employeeId);
+    if (!emp) return "—";
+    return emp.userId ? (userLookup.get(emp.userId) ?? emp.employeeCode) : emp.employeeCode;
+  };
+
+  const attendanceTableData: AttendanceTableRow[] = attendanceRecords.map((r) => ({
+    ...r,
+    employeeDisplayName: resolveEmployeeName(r.employeeId),
+  }));
 
   const presentCount = attendanceRecords.filter(
     (r) => r.status?.toLowerCase() === "present",
@@ -492,12 +500,10 @@ export function AttendanceWorkspace() {
       ) : (
         <MaterialReactTable
           columns={buildAttendanceColumns({
-            userLookup,
-            employeeLookup,
             onApprove: handleApprove,
             isApproving: approveState.loading,
           })}
-          data={attendanceRecords}
+          data={attendanceTableData}
           enableColumnFilters
           enableDensityToggle={false}
           enableFullScreenToggle={false}
